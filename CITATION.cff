@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+title: "Agent OS: A Local-First Broker for Vendor-Neutral AI Agent Coordination"
+message: "If you use Agent OS in research or industry work, please cite it using the metadata below."
+type: software
+authors:
+  - family-names: "Islam Santo"
+    given-names: "Shifat"
+    alias: "oneKn8"
+    email: "shifatislamsanto764@gmail.com"
+repository-code: "https://github.com/oneKn8/agent-os"
+url: "https://github.com/oneKn8/agent-os"
+abstract: >
+  Agent OS is a local-first operating system for AI agents that brokers
+  across local, cloud-rented, and vendor-hosted agents (Claude Code,
+  Codex CLI, Devin, ChatGPT/Operator, Cursor, custom GPTs, local LLMs).
+  It exposes a normalized adapter layer over heterogeneous vendor APIs
+  and provides supervisor-driven goal decomposition, cost-aware routing,
+  typed inter-agent messaging, conflict arbitration, audit, and per-agent
+  permission gates. The architecture is structurally defensible because
+  no single vendor can ship a neutral broker (lock-in is every vendor's
+  business model), and a cloud broker would itself become a vendor garden;
+  local-first is the only natural home.
+keywords:
+  - multi-agent-systems
+  - ai-agents
+  - agent-orchestration
+  - local-first
+  - llm-tooling
+  - mcp
+  - vendor-neutral
+  - llm-broker
+license: MIT
+date-released: 2026-05-05
+version: 0.0.1-pre-spec

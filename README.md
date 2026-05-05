@@ -6,6 +6,8 @@
 
 *One intent. Many agents. Real coordination. Full control.*
 
+Created and maintained by **[Shifat Islam Santo (oneKn8)](https://github.com/oneKn8)** — also author of [`machine-memory`](https://github.com/oneKn8/machine-memory), the substrate Agent OS runs on.
+
 [![Status](https://img.shields.io/badge/status-pre--spec-blue?style=flat-square)](./docs/00-vision.md)
 [![Language](https://img.shields.io/badge/built%20with-Go-00ADD8?style=flat-square&logo=go&logoColor=white)](./docs/00-vision.md#why-this-requires-go-or-rust--not-node-not-python)
 [![Substrate](https://img.shields.io/badge/substrate-machine--memory-7C3AED?style=flat-square)](https://github.com/oneKn8/machine-memory)
@@ -141,6 +143,18 @@ That's not a limitation that should kill the vision — feeling AGI-like for 90%
 
 ---
 
+## Citation
+
+If you use Agent OS in research, industry work, blog posts, or talks, please cite it. GitHub renders a "Cite this repository" button in the right sidebar from [`CITATION.cff`](./CITATION.cff). Plain-text form:
+
+> Shifat Islam Santo (2026). *Agent OS: A Local-First Broker for Vendor-Neutral AI Agent Coordination.* https://github.com/oneKn8/agent-os
+
+Full author list: [`AUTHORS`](./AUTHORS).
+
+---
+
 ## License
 
-[MIT](./LICENSE) — use it, fork it, build on it. The point is to keep the broker out of any single vendor's hands.
+[MIT](./LICENSE) © 2026 Shifat Islam Santo (oneKn8). Use it, fork it, build on it, sell things on top of it. The point is to keep the broker out of any single vendor's hands. Attribution preserved per the MIT clause.
+
+The name **"Agent OS"** as applied to this project is the trademark of Shifat Islam Santo. Forks and derivatives are encouraged; please use a different name when distributing.

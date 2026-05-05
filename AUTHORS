@@ -1,0 +1,21 @@
+# Agent OS — Authors
+
+The original author and maintainer of Agent OS is:
+
+  Shifat Islam Santo  <shifatislamsanto764@gmail.com>  (GitHub: oneKn8)
+
+Agent OS was conceived and designed by Shifat Islam Santo in 2026 as a
+local-first, vendor-neutral broker for AI agents. The vision, architecture,
+adapter-layer thesis, and product framing are his original work, captured in
+the project's git history beginning with commit 7efe110 on 2026-05-05.
+
+Sibling project `machine-memory` (the substrate Agent OS depends on) is also
+authored and maintained by Shifat Islam Santo:
+  https://github.com/oneKn8/machine-memory
+
+Future contributors are listed below. Thanks to everyone who helps build
+the broker that no vendor will ship.
+
+## Contributors
+
+(none yet — repo is pre-spec as of 2026-05-05)
