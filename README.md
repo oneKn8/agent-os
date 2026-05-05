@@ -1,10 +1,25 @@
 # Agent OS
 
-> Local agent operating system. Connects every AI agent on the machine into a cooperating team.
+> Local-first broker for the user's scattered AI agents. The neutral control plane no vendor will build.
 
 ## One-line goal
 
-Make the swarm of AI agents already running on this machine — Claude Code, Codex CLI, local LLMs, specialist scrapers/voice/vision agents — behave like one coherent assistant that handles open-ended work end-to-end. JARVIS-grade for the user's daily work.
+The user's agents are fragmenting across vendors — Claude Code locally, Codex CLI in another terminal, Devin rented at $500/month, custom GPTs in ChatGPT, Cursor in their editor, a local Llama for private work, specialist agents per task. Each vendor builds a walled garden. **Agent OS is the local-first daemon that brokers across all of them so they behave like one coherent team.** JARVIS-grade for the user's daily work, regardless of where individual agents physically live.
+
+## The structural opportunity
+
+```
+Anthropic     │ won't ship a broker — wants you in Claude
+OpenAI        │ won't ship a broker — wants you in ChatGPT/Operator
+Cognition     │ won't ship a broker — wants you in Devin
+Cursor        │ won't ship a broker — wants you in Cursor
+Every vendor  │ has the same incentive: lock-in
+              │
+              ▼
+              The broker has to come from outside the vendors.
+              Local-first is the natural home — anywhere else
+              is just another vendor garden.
+```
 
 ## Why this is a separate product from machine-memory
 

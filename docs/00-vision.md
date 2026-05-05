@@ -4,9 +4,21 @@
 
 ## The product
 
-A local agent operating system. Connects every AI agent on the machine — Claude Code, Codex CLI, local Llama, web scraper, voice TTS/STT, vision OCR/CV, specialist agents — into a coordinated team that handles open-ended work end-to-end without babysitting.
+A local-first agent operating system. **Brokers across the user's scattered AI agents — wherever they physically live — and makes them behave like one coordinated team.** Local Claude Code, Codex CLI in another terminal, a rented Devin instance, custom GPTs in ChatGPT, Cursor in the editor, a local Llama for private work, specialist agents per domain — all of them appear as one roster, take orders from one supervisor, share state through one substrate.
 
-User-facing experience: ambient, conversational, voice-capable. User states an intent ("research X and write a doc", "audit my repo and fix the issues you find", "monitor my email and triage"). The OS decomposes the goal into tasks, assigns each to the right agent, manages handoffs, gates on quality, surfaces results.
+User-facing experience: ambient, conversational, voice-capable. User states an intent ("research X and write a doc", "audit my repo and fix the issues you find", "monitor my email and triage"). The OS decomposes the goal into tasks, picks the right agent for each based on capability + cost + availability (regardless of vendor), manages handoffs, gates on quality, surfaces results.
+
+## The structural opportunity (why this is defensible)
+
+The agent population is fragmenting. Users will own (or rent) agents from many vendors — Anthropic, OpenAI, Cognition (Devin), Cursor, custom GPTs, local LLMs, specialist providers. Each vendor builds a walled garden because **lock-in is every vendor's business model**. Anthropic will never make Claude play nicely with OpenAI Operator. OpenAI will never make ChatGPT coordinate with Devin. The walled gardens are deliberate.
+
+This leaves an open, structurally-defensible position:
+
+- **No vendor can ship the broker** — it disadvantages them. So the broker has to come from outside the vendors.
+- **A cloud broker would just be another vendor garden** — whoever runs the broker server gets the lock-in. So the broker has to be local-first.
+- **An open standard (MCP, etc.) is necessary but not sufficient** — the protocol layer doesn't solve scheduling, cost arbitrage, audit, or capability matching. So the broker has to be a real product, not just a spec.
+
+Agent OS sits exactly in that hole: **local-first, vendor-neutral, real product (not just protocol).** Once the user has 3+ agent subscriptions, the broker becomes the most valuable piece of software they own — because every other agent runs through it.
 
 ## Architecture
 
@@ -38,15 +50,32 @@ User-facing experience: ambient, conversational, voice-capable. User states an i
        └────────┬──────┘  └────────┬──────┘  └────────┬──────┘
                 │                  │                  │
        ┌────────▼──────────────────▼──────────────────▼──────┐
-       │              AGENT ROSTER  (the team)               │
-       │ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐     │
-       │ │Claude   │ │Codex    │ │Local    │ │Web      │ ... │
-       │ │Code     │ │CLI      │ │Llama    │ │scraper  │     │
-       │ └─────────┘ └─────────┘ └─────────┘ └─────────┘     │
-       │ ┌─────────┐ ┌─────────┐ ┌─────────┐                 │
-       │ │Voice    │ │Vision   │ │Specialist│                │
-       │ │TTS/STT  │ │OCR/CV   │ │(yours)   │                │
-       │ └─────────┘ └─────────┘ └─────────┘                 │
+       │            ADAPTER LAYER  (the moat)                │
+       │ normalizes auth + streaming + tool format +         │
+       │ billing units + capability declarations across      │
+       │ every agent vendor's idiosyncratic API              │
+       └────────┬────────────────────────────────────────────┘
+                │
+       ┌────────▼────────────────────────────────────────────┐
+       │            AGENT ROSTER  (your team)                │
+       │                                                     │
+       │  LOCAL                CLOUD-RENTED       VENDOR     │
+       │  ┌──────────┐         ┌──────────┐      ┌─────────┐ │
+       │  │ Claude   │         │ Devin    │      │ ChatGPT │ │
+       │  │ Code     │         │ ($500/mo)│      │ Operator│ │
+       │  └──────────┘         └──────────┘      └─────────┘ │
+       │  ┌──────────┐         ┌──────────┐      ┌─────────┐ │
+       │  │ Codex CLI│         │ Custom   │      │ Cursor  │ │
+       │  │          │         │ GPTs     │      │ agents  │ │
+       │  └──────────┘         └──────────┘      └─────────┘ │
+       │  ┌──────────┐         ┌──────────┐                  │
+       │  │ Local    │         │ Per-task │                  │
+       │  │ Llama    │         │ rentals  │                  │
+       │  └──────────┘         └──────────┘                  │
+       │  ┌──────────┐                                       │
+       │  │ Specialist│ (your own — voice, vision, scrapers, │
+       │  │ agents    │  domain-specific)                    │
+       │  └──────────┘                                       │
        └────────┬────────────────────────────────────────────┘
                 │
        ┌────────▼────────────────────────────────────────────┐
@@ -78,7 +107,7 @@ Not magic. Each mechanism is concrete engineering. Stack 4-6 of these and the sy
 
 The naive version of multi-agent is *worse* than single-agent. Five agents talking past each other, hallucinating confidently because they trust each other's output, burning 10x tokens for marginal benefit, impossible to debug when something goes wrong. That is what most "agent framework" projects ship and why they don't deliver.
 
-The hardcore engineering is solving these seven problems:
+The hardcore engineering is solving these seven coordination problems:
 
 ```
 1. COORDINATION OVERHEAD       agents must spend < 30% of tokens
@@ -97,7 +126,78 @@ The hardcore engineering is solving these seven problems:
                                 need automated eval, not just user trust
 ```
 
-Solve these and you have an agent OS. Skip them and you have a chat that fans out to multiple LLMs.
+Plus seven *adapter* problems that come with brokering across vendors (this is the real moat — every vendor has their own idiosyncrasies):
+
+```
+A. AUTH NORMALIZATION          Anthropic API key + OpenAI bearer token +
+                                Devin webhook secret + local llama no-auth
+                                + Cursor session cookie — all behind one
+                                interface
+B. STREAMING SEMANTICS         SSE vs WebSocket vs chunked HTTP vs polling;
+                                tool-call interleaving differs per vendor
+C. TOOL FORMAT TRANSLATION     OpenAI function calling vs Anthropic tool
+                                use vs MCP vs custom — same task, different
+                                wire format on each side
+D. BILLING UNIT NORMALIZATION  tokens (input/output, cached/fresh) vs
+                                per-request vs compute-seconds vs per-task
+                                fees ($0.50 per Devin task, $0.02 per
+                                Claude turn, $0/local). All into one cost
+                                ledger.
+E. RATE LIMIT MANAGEMENT       each upstream has different limits, different
+                                backoff signals, different reset windows
+F. LATENCY VARIANCE            local Llama: 10ms first token; Claude API:
+                                500ms; Devin: 30+ seconds for a task.
+                                Supervisor must budget time AND know the
+                                latency profile per agent type
+G. CAPABILITY DECLARATION      vendors describe what their agent can do
+                                differently (or not at all). Need a
+                                normalized capability schema so the
+                                supervisor can match tasks
+```
+
+These adapter problems are why you need real systems engineering — not a Python script with 14 if-statements per vendor. The adapter layer must be:
+
+- **A pluggable abstraction** (new vendor support in < 1 day, not a fork)
+- **Cost-aware end-to-end** (dollar amount for any goal pre-execution, exact actual cost post-execution, drift < 5%)
+- **Failure-isolating** (one vendor's outage doesn't bring down the OS — supervisor reroutes)
+- **Audit-complete** (every external call logged with full request/response for replay)
+
+Solve all 14 problems (7 coordination + 7 adapter) and you have an agent OS. Skip them and you have a chat that fans out to multiple LLMs.
+
+## Why this requires Go (or Rust) — not Node, not Python
+
+The previous machine-memory daemon is Node + TypeScript. That works because mmd is mostly I/O — chokidar events, SQLite writes, MCP responses. Concurrency is light, latency is loose.
+
+Agent OS is different. Adapters need real concurrency (one daemon, dozens of in-flight upstream calls, each with its own streaming semantics + retry logic + cost tracking). The hot path needs predictable memory (no GC stalls during a critical handoff). Single-binary deployment matters because the daemon will run on every user's machine. eBPF tooling (`cilium/ebpf` for Go, `aya` for Rust) needs to be reachable without an FFI maze.
+
+```
+Language pick rationale:
+
+Go     ✓ production-grade goroutines map cleanly to per-agent workers
+       ✓ single binary, easy systemd + portability
+       ✓ cilium/ebpf is the most mature eBPF tooling outside C
+       ✓ ships fast — half the time-to-v1 of Rust
+       ✗ GC pauses possible (mitigated by careful allocation, off-heap
+          for hot paths)
+
+Rust   ✓ no GC; tighter perf ceiling; tokio is excellent
+       ✓ aya for eBPF is also production-ready
+       ✗ build time + cognitive load slow v0.1 by months
+       ✗ async Rust is still a sharp tool; needs a senior dev who's
+          done it before to ship without regret
+
+Node   ✗ single-threaded event loop wrong shape for the workload
+       ✗ adapters with native bindings (cost ledger crypto, eBPF, etc.)
+          would be a worker_threads / native-addon nightmare
+       ✗ used in mmd by historical accident, not because it's the
+          right tool
+
+Python ✗ no real concurrency story for this workload
+       ✗ would force every adapter to wrap async/await around blocking
+          libs; never ends well at production load
+```
+
+**Recommendation: Go for v0.1.** Rust if a Rust expert is on the team day one. Decision is logged in `02-roadmap.md`.
 
 ## What this is NOT
 

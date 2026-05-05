@@ -26,12 +26,13 @@ This is `machine-memory` work, not Agent OS work. Listed for sequencing clarity.
 
 Minimum viable swarm. ONE coordination pattern that works end-to-end.
 
-### Phase 1 — Agent identity + roster
+### Phase 1 — Agent identity + roster + first adapter
+- `agentd` daemon (Go binary) — separate process from `mmd`, runs as systemd user unit.
 - `agent_records` table in shared state.
-- Registration RPC: `agent.register({ name, capabilities[], adapter_endpoint })`.
+- Registration RPC: `agent.register({ name, capabilities[], adapter_kind, adapter_config })`.
 - Heartbeat + online/offline tracking.
-- `agentd` daemon (the OS daemon) — separate process from `mmd`, runs on user machine.
-- `agent` CLI: `agent list`, `agent inspect <name>`.
+- `agent` CLI: `agent list`, `agent inspect <name>`, `agent register`, `agent rm`.
+- **First adapter: Claude API direct.** Proves the adapter SDK shape end-to-end before fanning out to other vendors. Includes auth, streaming response handling, tool-call format translation, cost ledger entry per call.
 
 ### Phase 2 — Task queue
 - `task_records` table.
@@ -45,15 +46,19 @@ Minimum viable swarm. ONE coordination pattern that works end-to-end.
 - Persistence: every message logged to shared state, replayable.
 - Typed contracts: payload schemas registered per topic so consumers know what to expect.
 
-### Phase 4 — One working pipeline
-Pick the highest-leverage workflow and ship it end-to-end. Recommended: **research-plan-implement-review-merge** (the workflow already validated this session for software work).
+### Phase 4 — Adapter expansion + first cross-vendor pipeline
+Add the second and third adapters; prove the broker thesis end-to-end.
 
-- Supervisor agent (small fast model) decomposes a goal.
-- Worker agents (Claude Code, Codex CLI, others) claim subtasks.
-- Reviewer agent (separate model, hostile by default) gates merge.
-- Full audit trail visible via `agent show <task_id>`.
+- **Second adapter: local LLM via llama.cpp / ollama.** Proves the abstraction handles a vendor with completely different latency, billing (free), and tool-call shape. If the SDK forces compromises here, fix it before going further.
+- **Third adapter: a cloud-rented agent (Devin webhook + polling, OR an OpenAI Operator session).** Proves the abstraction handles long-running, async, expensive-per-task agents.
+- Supervisor agent (small fast model on the cheapest adapter — local Llama if possible) decomposes a goal.
+- Worker agents claim subtasks. **Each subtask is routed to the cheapest agent that meets the capability + quality bar** — this is the cost-arbitrage payoff.
+- Reviewer agent (separate model, different vendor, hostile by default) gates merge.
+- Full audit trail visible via `agent show <task_id>`. Includes per-vendor cost breakdown.
 
-**Exit criterion:** User states a software-engineering goal; the swarm completes it without babysitting; result is auditable; cost is < 2x single-agent baseline.
+**Recommended first pipeline: research-plan-implement-review-merge** (workflow already validated for software work). Supervisor on local Llama, plan + implement on Claude Code, review on a different vendor (e.g., Devin or local Llama with hostile prompt) so reviewer-implementer collusion can't happen.
+
+**Exit criterion:** User states a software-engineering goal; the swarm completes it without babysitting; result is auditable; cost is < 2x single-agent baseline; **at least two different vendors participated** (the cross-vendor part is the headline — without it we haven't proven the broker thesis).
 
 ## LATE (12-24 months) — supervisor that decomposes general goals
 
@@ -98,11 +103,13 @@ Risks ranked by how likely they are to kill the build, plus the mitigation for e
 
 These are the questions that need explicit answers before code starts. Capture them in a future `03-decisions.md`:
 
-- Daemon language (Go for ops simplicity vs Node/TS to share code with `mmd`)?
-- Comm bus implementation (in-process for v0.1, gRPC/NATS for later)?
-- Storage (extend `mmd`'s SQLite vs separate DB)?
-- Process model (one `agentd` daemon vs per-agent processes)?
-- Authentication (how does an external agent prove it is who it claims to be — for now: only locally-spawned agents, trust by parent process)?
-- Permission UX (CLI prompts? GUI tray app? Voice confirm?)?
+- ~~**Daemon language.**~~ **Resolved: Go for v0.1.** Rust acceptable if a Rust expert is on the team day one (see `00-vision.md` §"Why this requires Go" — the workload is wrong shape for Node/Python). Decision is final unless a Rust expert joins; otherwise revisit only if Go GC pauses prove a real problem in a measured benchmark.
+- **Comm bus implementation** (in-process channels for v0.1, gRPC/NATS when first remote agent adapter lands)?
+- **Storage** (extend `mmd`'s SQLite for agent_records / task_records / message_records vs separate DB)? Bias toward extension — single shared substrate is the whole point.
+- **Process model** (one `agentd` daemon vs per-agent supervisor processes)? Bias toward one daemon for v0.1 simplicity; per-agent processes for v0.2 if isolation matters.
+- **Adapter SDK shape** — what does writing a new adapter look like? Should be < 200 LOC for a typical vendor + < 1 day from start to working in the supervisor. This is the moat, so the SDK is a first-class deliverable.
+- **External-agent authentication** — how does the OS prove identity to vendor APIs (held tokens) AND prove identity TO local agents (so a malicious script can't impersonate the OS to a worker)? Local UDS + filesystem permissions for v0.1; signed tokens for v0.2.
+- **Permission UX** (CLI prompts? GUI tray app? Voice confirm?)? Bias toward CLI prompts for v0.1; tray app once non-developers are users.
+- **Cost ledger schema** — needs to handle tokens (input/output, cached/fresh), per-request, per-task, compute-seconds, and "free local" all in one normalized $-denominated schema. Decide before any adapter ships.
 
-None of these need answering today. They are the first set of plan-PR discussions when MID phase begins.
+None of these need answering today. They are the first set of plan-PR discussions when MID phase begins. The language decision being resolved early is deliberate — it unblocks every other technical conversation.

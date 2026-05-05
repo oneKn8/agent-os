@@ -20,21 +20,27 @@ The OS is shipping when all five hold:
 
 ## In scope
 
-- **Local-first orchestration** on a single machine, single user.
+- **Local-first orchestration** on a single machine, single user. Daemon runs on user's machine; agents (local or remote) plug in.
+- **Cross-vendor agent brokering** — the headline feature. Adapter layer normalizes auth, streaming, tool format, billing units, rate limits, latency profiles, and capability declarations across:
+  - **Local agents:** Claude Code (MCP), Codex CLI (subprocess), local LLMs via llama.cpp/ollama (HTTP), user's own specialist agents (SDK).
+  - **Cloud-rented agents:** Devin (webhook + polling), per-task agent rentals as the market emerges.
+  - **Vendor-hosted agents:** ChatGPT/Operator, Cursor agents, custom GPTs, Claude API direct.
 - **Coordination layer**: agent identity + capability registry, typed comm bus, task queue with claim/release semantics, supervisor/scheduler, conflict arbiter.
 - **Permission + safety model**: per-agent permission gates, irreversible-action blocks, kill switch, full audit log.
+- **Cost ledger**: unified $-denominated tracking across heterogeneous billing units (tokens, requests, compute-seconds, per-task fees). Pre-execution cost estimate, post-execution actual, drift bounded.
 - **Observability**: per-agent cost tracking, per-task latency, full message replay, eval harness for output quality.
 - **Integration with machine-memory** as the shared-state substrate. Files, activity, wiki all flow through `mmd`.
-- **Agent adapters** for the user's existing agent population: Claude Code (MCP-native), Codex CLI (subprocess), local LLMs running via llama.cpp or ollama (HTTP API), and a specialist-agent SDK for adding new ones.
 - **Voice/ambient interface** as the eventual primary surface (long-term, post-v1).
+- **Native daemon in Go** (Rust as alt if Rust expert on team). Not Node, not Python — see `00-vision.md` §"Why this requires Go".
 
 ## Out of scope (explicitly)
 
 - **Building new LLMs.** The OS uses existing frontier + local models as black boxes. No model training.
-- **Multi-user / cloud-hosted.** Single-user local-first only. Cloud agents that the user already pays for (Claude API, OpenAI API) are reachable via adapters, but the OS itself never runs on someone else's machine.
-- **Replacing existing agent tools.** Claude Code stays Claude Code. The OS coordinates them, does not replace them.
+- **The daemon itself running in the cloud.** Single-user local-first only. The OS *talks to* cloud-hosted agents via adapters (Claude API, OpenAI API, Devin, etc. — that's the whole product). But the OS *daemon* never runs on someone else's machine; that would just make it another vendor garden, defeating the point.
+- **Replacing existing agent tools.** Claude Code stays Claude Code. The OS coordinates them, does not replace them. Adapters are thin wrappers, not reimplementations.
 - **General-purpose chat UI.** The interface layer routes intents to agents; it is not a competing chat product. Conversation already happens inside the constituent agents.
 - **General AGI.** See `00-vision.md` §"What this is NOT". Outcome is JARVIS-feel for narrow domains, not a smarter underlying model.
+- **Becoming a vendor of agents.** The OS is a broker, not a marketplace. The user picks which agents to connect; the OS coordinates them.
 
 ## Non-goals (deliberately not pursued)
 
