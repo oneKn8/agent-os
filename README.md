@@ -1,52 +1,146 @@
+<div align="center">
+
 # Agent OS
 
-> Local-first broker for the user's scattered AI agents. The neutral control plane no vendor will build.
+**The local-first operating system for AI agents.**
 
-## One-line goal
+*One intent. Many agents. Real coordination. Full control.*
 
-The user's agents are fragmenting across vendors — Claude Code locally, Codex CLI in another terminal, Devin rented at $500/month, custom GPTs in ChatGPT, Cursor in their editor, a local Llama for private work, specialist agents per task. Each vendor builds a walled garden. **Agent OS is the local-first daemon that brokers across all of them so they behave like one coherent team.** JARVIS-grade for the user's daily work, regardless of where individual agents physically live.
+[![Status](https://img.shields.io/badge/status-pre--spec-blue?style=flat-square)](./docs/00-vision.md)
+[![Language](https://img.shields.io/badge/built%20with-Go-00ADD8?style=flat-square&logo=go&logoColor=white)](./docs/00-vision.md#why-this-requires-go-or-rust--not-node-not-python)
+[![Substrate](https://img.shields.io/badge/substrate-machine--memory-7C3AED?style=flat-square)](https://github.com/oneKn8/machine-memory)
+[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](./LICENSE)
+[![Last commit](https://img.shields.io/github/last-commit/oneKn8/agent-os?style=flat-square)](https://github.com/oneKn8/agent-os/commits)
 
-## The structural opportunity
+![Agent OS — full architecture overview](./docs/assets/agent-os-hero.png)
 
+</div>
+
+---
+
+## The pitch in one paragraph
+
+Your AI agents are fragmented. Claude Code in one terminal, Codex CLI in another, Devin rented at $500/month, ChatGPT/Operator and Cursor in their own gardens, custom GPTs floating around, a local Llama for private work. **They don't talk to each other and no vendor will fix this** — every vendor's business model is lock-in. A cloud broker would just become another walled garden. **Local-first is the only natural home.** Agent OS sits in that hole: the broker that turns your scattered agents into one coordinated team, runs on your machine, talks to anything.
+
+---
+
+## What it actually does
+
+A daemon (`agentd`, written in Go) that:
+
+1. **Brokers** across local + cloud-rented + vendor-hosted agents through a normalized adapter layer
+2. **Decomposes** your goals into subtasks and routes each to the cheapest agent that meets the quality bar
+3. **Coordinates** their work via a typed comm bus, task queue, and conflict arbiter
+4. **Audits** every action with full cost ledger + replay
+5. **Enforces** permission gates and a kill switch for irreversible actions
+6. **Shares state** through `machine-memory` (sibling repo) — files, activity, wiki, event stream
+
+You state intent. The swarm does the work. You see what every agent did, what it cost, and you can halt anything in under a second.
+
+---
+
+## What it'll feel like
+
+<details>
+<summary><b>Click to expand a sample session (real GIF lands when v0.1 ships)</b></summary>
+
+```bash
+$ agentd status
+roster online: claude-code-1, codex-cli-1, llama-local-3b, devin-rental-1
+queue: 0 tasks pending
+cost ledger today: $0.00
+
+$ agent goal "research the DFW rental market and draft me a 5-property comparison"
+[14:02:15] supervisor: decomposed into 3 subtasks
+[14:02:15] cost estimate: $0.40 (range $0.18 - $0.85), latency ~3 min
+[14:02:16] research-agent (codex-cli)  claimed: scrape 50 listings
+[14:02:17] data-agent     (claude-code) claimed: build comparison table
+[14:02:17] writer-agent   (claude-code) waiting for upstream
+[14:04:33] research-agent done   47 listings    $0.12   2m17s
+[14:04:50] data-agent     done   table built    $0.04   17s
+[14:05:08] writer-agent   done   draft ready    $0.02   18s
+[14:05:08] total: $0.18 across 3 agents in 2m53s
+[14:05:08] result: ./outputs/dfw-rental-comparison.md  (preview attached)
+
+$ agent show last
+goal:        research DFW rental market...
+agents:      research(codex-cli), data(claude-code), writer(claude-code)
+audit:       /var/log/agentd/audit/2026-05-05/14:02:15-goal-7f3e.jsonl
+cost:        $0.18 actual vs $0.40 estimated (55% under)
+permissions: file-read(grant), web-fetch(grant), file-write(grant in ./outputs)
 ```
-Anthropic     │ won't ship a broker — wants you in Claude
-OpenAI        │ won't ship a broker — wants you in ChatGPT/Operator
-Cognition     │ won't ship a broker — wants you in Devin
-Cursor        │ won't ship a broker — wants you in Cursor
-Every vendor  │ has the same incentive: lock-in
-              │
-              ▼
-              The broker has to come from outside the vendors.
-              Local-first is the natural home — anywhere else
-              is just another vendor garden.
+
+</details>
+
+---
+
+## How it stacks with `machine-memory`
+
+```mermaid
+flowchart TB
+    subgraph AOS["Agent OS (this repo) — coordination"]
+        direction LR
+        Sup[supervisor]
+        Adapt[adapters]
+        Coord[coordination]
+        Safe[safety + audit]
+    end
+
+    subgraph MM["machine-memory (sibling repo) — substrate"]
+        direction LR
+        Files[file index]
+        Wiki[auto-wiki]
+        Acts[activity events]
+        Sub[mm_subscribe stream]
+    end
+
+    AOS -->|reads / writes / subscribes| MM
+    MM -->|substrate of truth| AOS
 ```
 
-## Why this is a separate product from machine-memory
+`machine-memory` is the **shared filesystem of knowledge**. Agent OS is the **coordination layer on top.** Different repos, different ship cycles. Agent OS depends on machine-memory; machine-memory has no idea agent-os exists.
 
-`machine-memory` (sibling repo at `~/projects/ai/machine-memory`) is the **shared filesystem of knowledge** an agent OS needs. It is necessary but very far from sufficient. The hard parts of multi-agent coordination — identity, communication, task ownership, arbitration, safety, observability — are not solved by good memory. They need their own product.
+[See machine-memory →](https://github.com/oneKn8/machine-memory)
 
-Stack:
-
-```
-┌──────────────────────────┐
-│   AGENT OS  (this)       │  coordination, comms, supervision
-├──────────────────────────┤
-│   machine-memory (mmd)   │  shared state, file index, wiki, activity
-└──────────────────────────┘
-```
-
-Agent OS depends on machine-memory but is a separate codebase, separate daemon, separate ship cycle.
-
-## Documents
-
-- [`docs/00-vision.md`](./docs/00-vision.md) — full architecture, the boost mechanism, what "hardcore engineering" actually means
-- [`docs/01-scope.md`](./docs/01-scope.md) — explicit in-scope / out-of-scope / non-goals
-- [`docs/02-roadmap.md`](./docs/02-roadmap.md) — sequencing (24-36 month build to JARVIS-grade)
+---
 
 ## Status
 
-**Pre-spec.** Vision captured, scope locked, roadmap sketched. No code yet. Build does not begin until machine-memory is past Phase 3 (wiki compiler), per the sequencing in `02-roadmap.md`.
+| Layer | State |
+|---|---|
+| Vision + scope locked | done — see [`docs/00-vision.md`](./docs/00-vision.md) |
+| Roadmap drafted | done — see [`docs/02-roadmap.md`](./docs/02-roadmap.md) |
+| Language decided (Go) | done — see [`docs/00-vision.md`](./docs/00-vision.md#why-this-requires-go-or-rust--not-node-not-python) |
+| Substrate (machine-memory) Phase 1 | shipping (3/5 slices on main) |
+| Substrate (machine-memory) Phase 2-3 | not started |
+| Agent OS v0.1 (`agentd` daemon, first adapter) | not started — gated on substrate Phase 3 |
+| Agent OS v0.4 (3 adapters, cross-vendor pipeline) | not started |
+| JARVIS-feel ambient interface | not started — 24-36 month timeline |
 
-## Honest framing
+---
 
-"Near AGI" feel is the *outcome* of a working agent OS for narrow domains, not a guaranteed result. A great agent OS will make this machine feel JARVIS-like for software engineering, research, content production — anywhere the agents have strong tool access. It will NOT make the underlying models smarter. The intelligence ceiling is still the best individual model in the swarm. Read [`docs/00-vision.md`](./docs/00-vision.md) §"One thing to be honest about" before getting excited.
+## Why this requires Go (not Node, not Python)
+
+Adapters need real concurrency. One daemon, dozens of in-flight upstream calls, each with its own streaming semantics + retry logic + cost tracking. Hot path needs predictable memory (no GC stalls during a critical handoff). Single-binary deployment matters because the daemon will run on every user's machine. eBPF tooling (`cilium/ebpf`) is reachable without an FFI maze. Full tradeoff matrix in [`docs/00-vision.md`](./docs/00-vision.md#why-this-requires-go-or-rust--not-node-not-python).
+
+---
+
+## Why "near AGI" is honest framing — but not what you might think
+
+A great agent OS that orchestrates Claude + Codex + Devin + local LLMs will *feel* AGI-like for software engineering, research, content production — anywhere agents have strong tool access. **It will NOT make the underlying models smarter.** The intelligence ceiling is still the best individual model in the swarm.
+
+That's not a limitation that should kill the vision — feeling AGI-like for 90% of daily work is enormous value. But the framing matters: **agent OS = orchestration leverage on top of frontier models**, not a path to a smarter model. Read [`docs/00-vision.md`](./docs/00-vision.md) §"What this is NOT" before getting excited.
+
+---
+
+## Documentation
+
+- [**`docs/00-vision.md`**](./docs/00-vision.md) — full architecture, six boost mechanisms, fourteen hardcore-engineering problems (7 coordination + 7 adapter), language decision rationale
+- [**`docs/01-scope.md`**](./docs/01-scope.md) — one-sentence goal, five success criteria, in/out of scope, non-goals
+- [**`docs/02-roadmap.md`**](./docs/02-roadmap.md) — NEAR (substrate) → MID (v0.1) → LATE (general supervisor) → LATER (JARVIS), with explicit decision points
+
+---
+
+## License
+
+[MIT](./LICENSE) — use it, fork it, build on it. The point is to keep the broker out of any single vendor's hands.
